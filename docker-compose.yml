@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  # Название сервиса
+  zip-tool:
+    # Docker ищет Dockerfile в текущей папке (.) и строит образ
+    build: .
+    container_name: zip-tool-app
+    # Автозапуск при перезагрузке сервера
+    restart: always
+    ports:
+      - "3000:3000"
