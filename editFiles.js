@@ -2,44 +2,60 @@ import * as cheerio from 'cheerio';
 import path from 'path';
 
 export function processHtml(htmlContent) {
-    const $ = cheerio.load(htmlContent);
+    const phpBlocks = [];
+    
+    // 1. Прячем PHP блоки
+    // Регулярка ищет и <?php ... ?> и <?= ... ?> включая многострочные
+    let protectedHtml = htmlContent.replace(/<\?[\s\S]*?\?>/g, (match) => {
+        const id = `__PHP_BLOCK_${phpBlocks.length}__`;
+        phpBlocks.push(match);
+        return id;
+    });
 
-    // Вспомогательная функция, чтобы не писать 10 раз if/startsWith
+    // 2. Загружаем в Cheerio (теперь тут нет PHP, только безопасные строки)
+    const $ = cheerio.load(protectedHtml, { decodeEntities: false });
+
     const updateAttr = (selector, attr, folder) => {
         $(selector).each((i, el) => {
             const val = $(el).attr(attr);
-            // Если путь есть, он локальный (не http) и еще не начинается с нужной папки
-            if (val && !val.startsWith('http') && !val.startsWith('data:') && !val.startsWith(folder)) {
-                // Берем только имя файла и добавляем новую папку
-                const fileName = path.basename(val);
-                $(el).attr(attr, folder + fileName);
+            if (val) {
+                // Если в пути есть наш плейсхолдер, не трогаем его
+                if (val.includes('__PHP_BLOCK_')) return;
+
+                if (!val.startsWith('http') && !val.startsWith('data:') && !val.startsWith(folder)) {
+                    const fileName = path.basename(val);
+                    $(el).attr(attr, folder + fileName);
+                }
             }
         });
     };
 
-    // 1. Стили
     updateAttr('link[rel="stylesheet"]', 'href', 'css/');
-
-    // 2. Скрипты
     updateAttr('script[src]', 'src', 'js/');
-
-    // 3. Картинки
     updateAttr('img[src]', 'src', 'img/');
-
-    // 4. Видео (тег video и вложенные source)
     updateAttr('video', 'src', 'video/');
     updateAttr('video source', 'src', 'video/');
 
-    // 5. Шрифты (если вдруг на них есть прямые ссылки в <a>)
     $('a[href]').each((i, el) => {
         const href = $(el).attr('href');
-        const ext = path.extname(href).toLowerCase();
-        if (['.woff', '.woff2', '.ttf', '.otf'].includes(ext)) {
-            updateAttr(el, 'href', 'fonts/');
+        if (href && !href.includes('__PHP_BLOCK_')) {
+            const ext = path.extname(href).toLowerCase();
+            if (['.woff', '.woff2', '.ttf', '.otf'].includes(ext)) {
+                const fileName = path.basename(href);
+                $(el).attr('href', 'fonts/' + fileName);
+            }
         }
     });
 
-    return $.html();
+    // Получаем HTML обратно в виде строки
+    let resultHtml = $.html();
+
+    // 3. Возвращаем PHP блоки на место
+    phpBlocks.forEach((code, index) => {
+        resultHtml = resultHtml.replace(`__PHP_BLOCK_${index}__`, code);
+    });
+
+    return resultHtml;
 }
 
 

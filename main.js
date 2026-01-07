@@ -29,8 +29,13 @@ export function sorting(zipBuffer) {
             let content = entry.getData();
 
             // Магия трансформации текста
-            if (ext === '.html') {
-                content = Buffer.from(processHtml(content.toString()));
+            if (['.html', '.htm', '.php', '.phtml'].includes(ext)) {
+                let contentString = content.toString('utf-8');
+                // Проверяем, есть ли вообще в файле то, что нам нужно менять
+                // (чтобы не прогонять через cheerio тяжелые скрипты без HTML)
+                if (contentString.includes('<link') || contentString.includes('<script') || contentString.includes('<img')) {
+                    content = Buffer.from(processHtml(contentString));
+                }
             } 
             else if (ext === '.css') {
                 content = Buffer.from(processCss(content.toString()));
