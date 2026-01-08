@@ -66,10 +66,14 @@ fastify.register(async function (instance) {
         }
 
         try {
-            const transformed = transformCode(code);
-            return { success: true, result: transformed };
+            const transformedData = transformCode(code); // Получаем { result, fonts }
+            return { 
+                success: true, 
+                result: transformedData.result, 
+                fonts: transformedData.fonts 
+            };
         } catch (err) {
-            return reply.code(500).send({ error: 'Ошибка при трансформации кода' });
+            return reply.code(500).send({ error: 'Ошибка при трансформации' });
         }
     });
 }, { prefix: '/m1-nl' });

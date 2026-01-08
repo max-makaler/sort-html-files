@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%234caf50'/><text x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold' font-size='20'>NL</text></svg>">
     <title>M1-NL Transformer</title>
     <style>
         :root {
@@ -125,6 +126,22 @@
             align-self: center;
             color: var(--text-muted);
         }
+        .notes-container {
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+            font-size: 0.85rem;
+            color: #a0ffa0; /* Светло-зеленый как в правом поле */
+            min-height: 40px;
+        }
+        .note-item {
+            margin-bottom: 5px;
+            display: block;
+        }
+        .note-item::before {
+            content: "- ";
+        }
     </style>
 </head>
 <body>
@@ -146,6 +163,9 @@
             <span class="title">Optimized HTML (NL)</span>
         </div>
         <textarea id="outputCode" readonly placeholder="Результат появится здесь..."></textarea>
+        
+        <div id="notes-list" class="notes-container" style="display: none;"></div>
+
         <div class="actions">
             <span id="status-right" class="status-msg"></span>
             <button id="btn-copy" disabled onclick="copyResult()">Скопировать результат</button>
@@ -180,13 +200,33 @@
 
             const data = await response.json();
 
+            // Внутри функции sendData() после data.success:
             if (data.success) {
                 outputArea.value = data.result;
-                inputArea.value = ''; // Очистка левого поля
-                btnSend.innerText = 'Трансформировать';
-                // btnSend остается disabled т.к. поле пустое
+                inputArea.value = '';
                 
-                btnCopy.disabled = false; // Активируем копирование
+                // Отрисовка списка шрифтов
+                const notesBox = document.getElementById('notes-list');
+                notesBox.innerHTML = ''; // Очистка
+                
+                // Добавляем шрифты
+                data.fonts.forEach(font => {
+                    const item = document.createElement('div');
+                    item.className = 'note-item';
+                    item.innerText = `добавьте шрифт ${font}`;
+                    notesBox.appendChild(item);
+                });
+                
+                // Всегда добавляем удаление inc
+                const incItem = document.createElement('div');
+                incItem.className = 'note-item';
+                incItem.innerText = 'удалите папку inc/';
+                notesBox.appendChild(incItem);
+                
+                notesBox.style.display = 'block'; // Показываем блок
+                
+                btnSend.innerText = 'Трансформировать';
+                btnCopy.disabled = false;
                 showStatus('status-right', 'Успешно обработано!');
             } else {
                 alert('Ошибка: ' + data.error);

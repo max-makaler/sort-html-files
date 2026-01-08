@@ -1,5 +1,6 @@
 export function transformCode(html) {
     let res = html.trim();
+    const foundFonts = new Set(); // тута шрифты
 
     const initCode = `<?php
 $cms = require_once $_SERVER['DOCUMENT_ROOT'] . '/init.php';
@@ -44,7 +45,14 @@ $cms->landing( 1, 2 ); // Идентификаторы оффера и сайт�
 
     // 7. Статика
     res = res.replace(/\/\/static\.(?:<\?[\s\S]*?\?>|\$static_domain)\/land\/(.*?)(["'])/gi, (match, path, quote) => {
-        if (path.startsWith('fonts/')) return path + quote;
+        if (path.startsWith('fonts/')) {
+            // Извлекаем название шрифта: fonts/Akrobat/Akrobat.css -> Akrobat
+            const parts = path.split('/');
+            if (parts[1]) {
+                foundFonts.add(parts[1]);
+            }
+            return path + quote;
+        }
         return '/assets_pages/' + path + quote;
     });
 
@@ -65,5 +73,8 @@ $cms->landing( 1, 2 ); // Идентификаторы оффера и сайт�
     // Чистка лишних пустых строк
     res = res.replace(/^\s*[\r\n]/gm, '\n');
 
-    return res;
+    return {
+        result: res,
+        fonts: Array.from(foundFonts)
+    };
 }
